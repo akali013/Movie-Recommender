@@ -29,7 +29,7 @@ def initializeQuery():
     return query
 
 def getMovies():
-    searchUrl = f"https://www.omdbapi.com/?apikey={API_KEY}&s={query["Title"].replace(" ", "%20")}&type=movie"
+    searchUrl = f"https://www.omdbapi.com/?apikey={API_KEY}&s={query['Title'].replace(' ', '%20')}&type=movie"
     searchJSON = request.urlopen(searchUrl).read().decode("utf8") 
     searchJSON = json.loads(searchJSON)
     return searchJSON["Search"]    # List of movies that matched the query's title
@@ -89,4 +89,4 @@ process(query, False)
 resultList = getMovies()
 processMovies(resultList)
 rankings = getRankings()
-# print(rankings)
+print(rankings)
