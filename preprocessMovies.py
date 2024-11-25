@@ -5,8 +5,11 @@ from nltk.corpus import stopwords
 from urllib import request
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-# nltk.download("stopwords")
-# nltk.download("punkt_tab")
+nltk.download("stopwords")
+nltk.download("punkt_tab")
+from sentence_transformers import SentenceTransformer, util
+
+model = SentenceTransformer('all-MiniLM-L6-v2')
 
 API_KEY = "fb113353"
 porter = nltk.PorterStemmer()
@@ -19,74 +22,87 @@ websites = []        # Will contain the urls of every movie's website
 rankedMovieInfo = [] # Will contain the readable full information of each movie
 
 def initializeQuery():
-    documentVocabs.clear()   # Clear old vocabularies
-    # Replace with values from JS frontend
-    query = {
-        "Title": "dragon ball",
-        "Genre": "Animation",
-        "Plot": "androids"
-    }
+    title = input("Enter a movie title (optional): ").strip()
+    genre = input("Enter a genre (optional): ").strip()
+    plot = input("Describe the plot (e.g., 'horror movie with poltergeists'): ").strip()
+    query = {"Title": title, "Genre": genre, "Plot": plot}
     return query
 
-def getMovies():
-    searchUrl = f"https://www.omdbapi.com/?apikey={API_KEY}&s={query['Title'].replace(' ', '%20')}&type=movie"
-    searchJSON = request.urlopen(searchUrl).read().decode("utf8") 
-    searchJSON = json.loads(searchJSON)
-    return searchJSON["Search"]    # List of movies that matched the query's title
+def getMovies(query):
+    if query["Title"]:
+        # Use the title to narrow the search
+        searchUrl = f"https://www.omdbapi.com/?apikey={API_KEY}&s={query['Title'].replace(' ', '%20')}&type=movie"
+    elif query["Genre"]:
+        # Use a broad genre-based search
+        searchUrl = f"https://www.omdbapi.com/?apikey={API_KEY}&s={query['Genre'].replace(' ', '%20')}&type=movie"
+    else:
+        # Fallback to a generic broad search
+        searchUrl = f"https://www.omdbapi.com/?apikey={API_KEY}&s=movie&type=movie"
+
+    try:
+        searchJSON = request.urlopen(searchUrl).read().decode("utf8")
+        searchJSON = json.loads(searchJSON)
+        return searchJSON.get("Search", [])  # Return the list of movies or an empty list if none found
+    except Exception as e:
+        print(f"Error fetching movies: {e}")
+        return []    # List of movies that matched the query's title
 
 # Takes each movie from the search result, processes it, and returns an array of the weighted vectors
 def processMovies(resultList):
-    for i in range(len(resultList)):
-        id = resultList[i]["imdbID"]
-        movieUrl = f"https://www.omdbapi.com/?apikey={API_KEY}&i={id}&type=movie&plot=full"   # Get movie's full information via its IMDb ID
-        movieJSON = request.urlopen(movieUrl).read().decode("utf8")
-        movieJSON = json.loads(movieJSON)
-        rankedMovieInfo.append(movieJSON)
-        process(movieJSON, True)
+    for movie in resultList:
+        try:
+            id = movie["imdbID"]
+            movieUrl = f"https://www.omdbapi.com/?apikey={API_KEY}&i={id}&type=movie&plot=full"
+            movieJSON = json.loads(request.urlopen(movieUrl).read().decode("utf8"))
+            rankedMovieInfo.append(movieJSON)  # Store detailed movie info
+            posters.append(movieJSON.get("Poster", "No poster available"))
+            websites.append(movieJSON.get("Website", "No website available"))
+            process(movieJSON, True)  # Process movie for document vocabulary
+        except Exception as e:
+            print(f"Error processing movie {movie['Title']}: {e}")
 
 # Transforms a query/movie into a document containing its vocabulary (stemmed, stopword removed, and tokenized) terms of its JSON field values 
 # isMovie is True when a movie is passed to it, and False when the query is passed to it
 def process(movie, isMovie):
     if isMovie:
-        # Remove redundant or unimportant fields
-        del movie["Ratings"]       # Ratings already covered by metascore and imdbrating values
-        posters.append(movie["Poster"])  
-        websites.append(movie["Website"])  
-        del movie["Poster"]
-        del movie["BoxOffice"]
-        del movie["Production"]
-        del movie["Website"]
-        
-    # Apply the same processing to the query and movies
+        # Remove unimportant fields for movies
+        for key in ["Ratings", "Poster", "BoxOffice", "Production", "Website"]:
+            movie.pop(key, None)
+
+    # Apply stopword removal, stemming, and tokenization
     plotTerms = movie["Plot"].split()
-    movie["Plot"] = [word for word in plotTerms if not word.lower() in stopwordList]  # Remove stopwords from plot
-    movie["Plot"] = " ".join([porter.stem(word) for word in plotTerms])    # Stem each plot term and convert from list to string
-    rawMovie = " ".join(movie.values()) 
-    movieTerms = word_tokenize(rawMovie)        # Tokenize the entire movie
-    movieDoc = " ".join(movieTerms) 
+    movie["Plot"] = [word for word in plotTerms if not word.lower() in stopwordList]  # Remove stopwords
+    movie["Plot"] = " ".join([porter.stem(word) for word in plotTerms])# Stem each word
+    rawMovie = " ".join(movie.values())  # Combine all text fields
+    movieTerms = word_tokenize(rawMovie) # Tokenize
+    movieDoc = " ".join(movieTerms)      # Convert back to string
     documentVocabs.append(movieDoc)
 
-# Computes the cosine similarity between the query and every movie, and then rank them
-def getRankings():
-    # TF-IDF weigh each document into a vector  
-    # Query is the first row, the documents are the remaining rows
-    TFIDFMatrix = vectorizer.fit_transform(documentVocabs)
-    rankedScores = [0 for _ in range(TFIDFMatrix.shape[0])]     # Initialize ranking list of similarity measures
-    
-    for i in range(TFIDFMatrix.shape[0]):
-        rankedScores[i] = cosine_similarity(TFIDFMatrix[0], TFIDFMatrix[i])
-    del rankedScores[0]
+# Function to Compute Semantic Similarity
+def computeSemanticSimilarity(query, plots):
+    queryEmbedding = model.encode(query, convert_to_tensor=True)
+    plotEmbeddings = model.encode(plots, convert_to_tensor=True)
+    scores = util.cos_sim(queryEmbedding, plotEmbeddings).squeeze().tolist()
+    return scores
 
-    # Map each movie title to its score and sort them
-    rankings = dict(zip([movie["Title"] for movie in rankedMovieInfo], rankedScores))
-    rankings = sorted(rankings.items(), key=lambda x: x[1], reverse=True)   # Sort titles by their similarity measures (x[1]) in descending order
-    rankings = dict(rankings)
-    return rankings
+# Function to Rank Movies Based on Query Similarity
+def getRankings(query):
+    # Use semantic similarity for ranking
+    plots = [movie["Plot"] for movie in rankedMovieInfo]
+    similarityScores = computeSemanticSimilarity(query["Plot"], plots)
+
+    # Map similarity scores to movie titles
+    rankings = dict(zip([movie["Title"] for movie in rankedMovieInfo], similarityScores))
+    rankings = sorted(rankings.items(), key=lambda x: x[1], reverse=True)  # Sort by score descending
+    return dict(rankings)
 
 
-query = initializeQuery()
-process(query, False)
-resultList = getMovies()
-processMovies(resultList)
-rankings = getRankings()
-print(rankings)
+query = initializeQuery()              
+process(query, False)                 
+resultList = getMovies(query)        
+processMovies(resultList)         
+rankings = getRankings(query)     
+
+# Print Rankings
+for title, score in rankings.items():
+    print(f"{title}: {score}")
