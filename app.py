@@ -17,7 +17,7 @@ stopwordList = set(stopwords.words("english"))
 
 # Sentence-BERT model
 model = SentenceTransformer('all-MiniLM-L6-v2')
-API_KEY = "fb113353"  # Replace with your OMDb API key
+API_KEY = "fb113353"  # OMDb API key
 
 # Movie search logic (from the enhanced program)
 def search_and_rank_movies(title, genre, plot):
@@ -39,6 +39,8 @@ def search_and_rank_movies(title, genre, plot):
     rankedMovieInfo = []
     plots = []
     titles = []
+    genres = []
+    posters = []
 
     for movie in resultList:
         try:
@@ -48,19 +50,24 @@ def search_and_rank_movies(title, genre, plot):
             rankedMovieInfo.append(movieJSON)
             plots.append(movieJSON.get("Plot", ""))
             titles.append(movieJSON.get("Title", "Unknown Title"))
+            genres.append(movieJSON.get("Genre", ""))
+            posters.append(movieJSON.get("Poster", ""))
         except Exception as e:
             print(f"Error processing movie {movie['Title']}: {e}")
 
-    # Compute semantic similarity between the query plot and movie plots
-    queryEmbedding = model.encode(plot, convert_to_tensor=True)
-    plotEmbeddings = model.encode(plots, convert_to_tensor=True)
-    similarityScores = util.cos_sim(queryEmbedding, plotEmbeddings).squeeze().tolist()
+    # Compute semantic similarity between the query data and movies data
+    queryData = title + " " + genre + " " + plot
+    moviesData = [f"{title} {genre} {plot}" for title, genre, plot in zip(titles, genres, plots)]
 
-    # Combine titles and scores into a sorted list
+    queryEmbedding = model.encode(queryData, convert_to_tensor=True)
+    movieEmbeddings = model.encode(moviesData, convert_to_tensor=True)
+    similarityScores = util.cos_sim(queryEmbedding, movieEmbeddings).squeeze().tolist()
+
+    # Combine titles, scores, and posters into a sorted list
     rankedResults = sorted(
-        zip(titles, similarityScores), key=lambda x: x[1], reverse=True
+        zip(titles, similarityScores, posters), key=lambda x: x[1], reverse=True
     )
-    return [{"title": title, "score": score} for title, score in rankedResults]
+    return [{"title": title, "score": score, "poster": poster} for title, score, poster in rankedResults]
 
 # API Endpoint
 @app.route("/search", methods=["POST"])
@@ -74,7 +81,6 @@ def search_movies():
         genre = data.get("genre", "")
         plot = data.get("plot", "")
         print(f"Title: {title}, Genre: {genre}, Plot: {plot}")
-
         # Perform search and ranking
         results = search_and_rank_movies(title, genre, plot)
         print("Results:", results)
