@@ -2,22 +2,22 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width-device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Movie Recommender</title>
-        <link rel="stylesheet" href="inputBoxes.css">    <!--Link to inputBoxes.css-->
+        <link rel="stylesheet" href="inputBoxes.css"> <!-- Link to inputBoxes.css -->
     </head>
 
     <body>
         <div class="inputBoxes">
-            <form id="movie-search-form" onsubmit="getSearchValues(); return false;">        <!--return false prevents page reload-->
-                <!--Title input box-->
+            <form id="movie-search-form" onsubmit="getSearchValues(); return false;"> <!-- return false prevents page reload -->
+                <!-- Title input box -->
                 <label for="title">Title:</label>
                 <input type="text" id="title" name="title" placeholder="Enter movie title" required>
 
-                <!--Genre input box-->
+                <!-- Genre input box -->
                 <label for="genre">Genre:</label>
                 <select name="genre" id="genre">
-                    <option value=""></option>      <!--Default option-->
+                    <option value=""></option> <!-- Default option -->
                     <option value="Action">Action</option>
                     <option value="Adventure">Adventure</option>
                     <option value="Animation">Animation</option>
@@ -44,7 +44,7 @@
                     <option value="Western">Western</option>
                 </select>
 
-                <!--Plot input box-->
+                <!-- Plot input box -->
                 <label for="plot">Plot:</label>
                 <textarea id="plot" name="plot" placeholder="Enter movie plot" rows="4"></textarea>
 
@@ -52,6 +52,12 @@
             </form>
         </div>
 
-        <script src="inputBoxes.js"></script> <!--Link to inputBoxes.js-->
+        <!-- Section to display results -->
+        <div id="results-container">
+            <h2>Search Results:</h2>
+            <div id="results"></div>
+        </div>
+
+        <script src="inputBoxes.js"></script> <!-- Link to inputBoxes.js -->
     </body>
 </html>
