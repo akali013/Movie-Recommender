@@ -5,8 +5,8 @@ from nltk.corpus import stopwords
 from urllib import request
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-nltk.download("stopwords")
-nltk.download("punkt_tab")
+# nltk.download("stopwords")
+# nltk.download("punkt_tab")
 from sentence_transformers import SentenceTransformer, util
 
 model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -88,8 +88,12 @@ def computeSemanticSimilarity(query, plots):
 # Function to Rank Movies Based on Query Similarity
 def getRankings(query):
     # Use semantic similarity for ranking
+    titles = [movie["Title"] for movie in rankedMovieInfo]
+    genres = [movie["Genre"] for movie in rankedMovieInfo]
     plots = [movie["Plot"] for movie in rankedMovieInfo]
-    similarityScores = computeSemanticSimilarity(query["Plot"], plots)
+    queryData = query["Title"] + " " + query["Genre"] + " " + query["Plot"]
+    moviesData = [f"{title} {genre} {plot}" for title, genre, plot in zip(titles, genres, plots)]
+    similarityScores = computeSemanticSimilarity(queryData, moviesData)
 
     # Map similarity scores to movie titles
     rankings = dict(zip([movie["Title"] for movie in rankedMovieInfo], similarityScores))
