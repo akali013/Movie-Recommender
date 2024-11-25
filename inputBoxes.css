@@ -100,3 +100,13 @@ button:hover {
     font-size: 1.1em;
 }
   
+#results {
+    display: flex;
+    flex-wrap: wrap; /* Allow wrapping to next row */
+    gap: 10px;       /* Space between movie elements */
+}
+
+#movie-grid-element {
+    word-wrap: break-word;   /* Wrap title onto next line if it's too long */
+    background-color: gainsboro;
+}

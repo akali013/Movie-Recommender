@@ -1,6 +1,7 @@
 let userTitle;
 let userGenre;
 let userPlot;
+let defaultMovieURL = "https://cdn-icons-png.freepik.com/512/7271/7271342.png"
 
 function getSearchValues() {
     // Get input values from the form
@@ -53,9 +54,15 @@ function displayResults(data) {
     // Display each result
     data.forEach((movie) => {
         const movieElement = document.createElement("div");
+        movieElement.id = "movie-grid-element"
+        movieElement.style.width = "200px"
         movieElement.classList.add("result");
         movieElement.innerHTML = `
+            <center>
+            <img src="${movie.poster}" width="200" height="auto" onerror="this.onerror=null; this.src='${defaultMovieURL}';">
+            <br>
             <strong>${movie.title}</strong> - Similarity Score: ${movie.score.toFixed(2)}
+            </center>
         `;
         resultsContainer.appendChild(movieElement);
     });
