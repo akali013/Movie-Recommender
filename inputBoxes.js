@@ -41,13 +41,13 @@ function displayResults(data) {
     const resultsContainer = document.getElementById("results");
     resultsContainer.innerHTML = ""; // Clear previous results
 
-    if (data.error) {
-        displayError(data.error);
+    if (data == "No results found") {
+        resultsContainer.innerHTML = "<p>No results found. Try refining your search.</p>";
         return;
     }
 
-    if (data.length === 0) {
-        resultsContainer.innerHTML = "<p>No results found. Try refining your search.</p>";
+    if (data.error) {
+        displayError(data.error);
         return;
     }
 
