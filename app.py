@@ -89,7 +89,6 @@ def search_and_rank_movies(title, genre, plot):
     # queryData = title + " " + genre + " " + plot
     # moviesData = [f"{title} {genre} {plot}" for title, genre, plot in zip(titles, genres, plots)]
 
-    print("NEW LINE TYPE BEAT")
     print(queryData)
     print(moviesData)
     queryEmbedding = model.encode(queryData, convert_to_tensor=True)
