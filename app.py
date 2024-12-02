@@ -5,6 +5,8 @@ import json
 import nltk
 from nltk.corpus import stopwords
 from urllib import request as url_request
+from nltk import word_tokenize
+from nltk import PorterStemmer
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -14,10 +16,32 @@ CORS(app)
 nltk.download("stopwords")
 nltk.download("punkt")
 stopwordList = set(stopwords.words("english"))
+porter = PorterStemmer()
 
 # Sentence-BERT model
 model = SentenceTransformer('all-MiniLM-L6-v2')
 API_KEY = "fb113353"  # OMDb API key
+
+queryData = []
+moviesData = []
+
+# Transforms a query/movie into a document containing its vocabulary (stemmed, stopword removed, and tokenized) terms of its JSON field values 
+# isMovie is True when a movie is passed to it, and False when the query is passed to it
+def process(movie, isMovie):
+    if isMovie:
+        # Remove unimportant fields for movies
+        for key in ["Ratings", "Poster", "BoxOffice", "Production", "Website"]:
+            movie.pop(key, None)
+
+    # Apply stopword removal, stemming, and tokenization
+    plotTerms = movie["Plot"].split()
+    movie["Plot"] = [word for word in plotTerms if not word.lower() in stopwordList]  # Remove stopwords
+    movie["Plot"] = " ".join([porter.stem(word) for word in plotTerms])# Stem each word
+    rawMovie = " ".join(movie.values())  # Combine all text fields
+    movieTerms = word_tokenize(rawMovie) # Tokenize
+    movieDoc = " ".join(movieTerms)      # Convert back to string
+    return movieDoc
+    
 
 # Movie search logic (from the enhanced program)
 def search_and_rank_movies(title, genre, plot):
@@ -41,9 +65,9 @@ def search_and_rank_movies(title, genre, plot):
         return "No results found"
 
     rankedMovieInfo = []
-    plots = []
+    # plots = []
     titles = []
-    genres = []
+    # genres = []
     posters = []
 
     for movie in resultList:
@@ -52,17 +76,22 @@ def search_and_rank_movies(title, genre, plot):
             movieUrl = f"https://www.omdbapi.com/?apikey={API_KEY}&i={id}&type=movie&plot=full"
             movieJSON = json.loads(url_request.urlopen(movieUrl).read().decode("utf8"))
             rankedMovieInfo.append(movieJSON)
-            plots.append(movieJSON.get("Plot", ""))
-            titles.append(movieJSON.get("Title", "Unknown Title"))
-            genres.append(movieJSON.get("Genre", ""))
             posters.append(movieJSON.get("Poster", ""))
+            # plots.append(movieJSON.get("Plot", ""))
+            titles.append(movieJSON.get("Title", "Unknown Title"))
+            # genres.append(movieJSON.get("Genre", ""))
+            moviesData.append(process(movieJSON, True))
+
         except Exception as e:
             print(f"Error processing movie {movie['Title']}: {e}")
 
     # Compute semantic similarity between the query data and movies data
-    queryData = title + " " + genre + " " + plot
-    moviesData = [f"{title} {genre} {plot}" for title, genre, plot in zip(titles, genres, plots)]
+    # queryData = title + " " + genre + " " + plot
+    # moviesData = [f"{title} {genre} {plot}" for title, genre, plot in zip(titles, genres, plots)]
 
+    print("NEW LINE TYPE BEAT")
+    print(queryData)
+    print(moviesData)
     queryEmbedding = model.encode(queryData, convert_to_tensor=True)
     movieEmbeddings = model.encode(moviesData, convert_to_tensor=True)
     similarityScores = util.cos_sim(queryEmbedding, movieEmbeddings).squeeze().tolist()
@@ -89,6 +118,9 @@ def search_movies():
         genre = data.get("genre", "")
         plot = data.get("plot", "")
         print(f"Title: {title}, Genre: {genre}, Plot: {plot}")
+        query = {"Title": title, "Genre": genre, "Plot": plot}
+        queryData.append(process(query, False))
+        
         # Perform search and ranking
         results = search_and_rank_movies(title, genre, plot)
         print("Results:", results)
