@@ -65,9 +65,7 @@ def search_and_rank_movies(title, genre, plot):
         return "No results found"
 
     rankedMovieInfo = []
-    # plots = []
     titles = []
-    # genres = []
     posters = []
 
     for movie in resultList:
@@ -77,18 +75,13 @@ def search_and_rank_movies(title, genre, plot):
             movieJSON = json.loads(url_request.urlopen(movieUrl).read().decode("utf8"))
             rankedMovieInfo.append(movieJSON)
             posters.append(movieJSON.get("Poster", ""))
-            # plots.append(movieJSON.get("Plot", ""))
             titles.append(movieJSON.get("Title", "Unknown Title"))
-            # genres.append(movieJSON.get("Genre", ""))
             moviesData.append(process(movieJSON, True))
 
         except Exception as e:
             print(f"Error processing movie {movie['Title']}: {e}")
 
     # Compute semantic similarity between the query data and movies data
-    # queryData = title + " " + genre + " " + plot
-    # moviesData = [f"{title} {genre} {plot}" for title, genre, plot in zip(titles, genres, plots)]
-
     print(queryData)
     print(moviesData)
     queryEmbedding = model.encode(queryData, convert_to_tensor=True)
