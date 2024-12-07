@@ -56,7 +56,7 @@ def search_and_rank_movies(title, genre, plot):
     try:
         searchJSON = url_request.urlopen(searchUrl).read().decode("utf8")
         searchJSON = json.loads(searchJSON)
-        resultList = searchJSON.get("Search", [])
+        resultList = searchJSON.get("Search", [])   # Movies from the search request type
     except Exception as e:
         return {"error": f"Error fetching movies: {str(e)}"}, 500
     
@@ -71,12 +71,12 @@ def search_and_rank_movies(title, genre, plot):
     for movie in resultList:
         try:
             id = movie["imdbID"]
-            movieUrl = f"https://www.omdbapi.com/?apikey={API_KEY}&i={id}&type=movie&plot=full"
+            movieUrl = f"https://www.omdbapi.com/?apikey={API_KEY}&i={id}&type=movie&plot=full"  # Get genres and plot of current movie
             movieJSON = json.loads(url_request.urlopen(movieUrl).read().decode("utf8"))
             rankedMovieInfo.append(movieJSON)
             posters.append(movieJSON.get("Poster", ""))
             titles.append(movieJSON.get("Title", "Unknown Title"))
-            moviesData.append(process(movieJSON, True))
+            moviesData.append(process(movieJSON, True))   # Process current movie
 
         except Exception as e:
             print(f"Error processing movie {movie['Title']}: {e}")
@@ -88,14 +88,17 @@ def search_and_rank_movies(title, genre, plot):
     movieEmbeddings = model.encode(moviesData, convert_to_tensor=True)
     similarityScores = util.cos_sim(queryEmbedding, movieEmbeddings).squeeze().tolist()
 
+    queryData.clear()
     # If only one movie is returned, do not sort it and return it as an array for the foreach in inputBoxes.js
     if len(moviesData) == 1:
+        moviesData.clear()
         return [{"title": titles[0], "score": similarityScores, "poster": posters[0]}] 
     else:
         # Combine titles, scores, and posters into a sorted list
         rankedResults = sorted(
             zip(titles, similarityScores, posters), key=lambda x: x[1], reverse=True
         )
+        moviesData.clear()
         return [{"title": title, "score": score, "poster": poster} for title, score, poster in rankedResults]
 
 # API Endpoint
