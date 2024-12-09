@@ -8,6 +8,9 @@
     </head>
 
     <body>
+            <h1 class="page-title">Movie Recommender</h1>
+            <p class="subtitle">Find your next favorite movie based on your preferences!</p>
+
         <div class="inputBoxes">
             <form id="movie-search-form" onsubmit="getSearchValues(); return false;"> <!-- return false prevents page reload -->
                 <!-- Title input box -->
@@ -17,7 +20,7 @@
                 <!-- Genre input box -->
                 <label for="genre">Genre:</label>
                 <select name="genre" id="genre">
-                    <option value=""></option> <!-- Default option -->
+                    <option value="" disabled selected>Select Genre</option> <!-- Default option -->
                     <option value="Action">Action</option>
                     <option value="Adventure">Adventure</option>
                     <option value="Animation">Animation</option>
@@ -43,6 +46,7 @@
                     <option value="War">War</option>
                     <option value="Western">Western</option>
                 </select>
+                <div id="selected-genres" class="tags-container"></div>
 
                 <!-- Plot input box -->
                 <label for="plot">Plot:</label>
@@ -55,9 +59,21 @@
         <!-- Section to display results -->
         <div id="results-container">
             <h2>Search Results:</h2>
-            <div id="results"></div>
+            <div id="results"></div> <!-- This is for the search results -->
+        
+            <!-- Add a section for the selected movie details -->
+            <div id="movie-details-container" style="display: none; margin-top: 20px;">
+                <h3>Selected Movie Details</h3>
+                <div id="movie-details"></div>
+            </div>
         </div>
 
+        <!-- Section to display detailed movie info -->
+        <div id="movie-details-container" style="display: none;">
+            <h2>Movie Details</h2>
+            <div id="movie-details"></div>
+        </div>
+        
         <script src="inputBoxes.js"></script> <!-- Link to inputBoxes.js -->
     </body>
 </html>

@@ -48,8 +48,8 @@ def search_and_rank_movies(title, genre, plot):
     # Fetch movies from OMDb
     if title:
         searchUrl = f"https://www.omdbapi.com/?apikey={API_KEY}&s={title.replace(' ', '%20')}&type=movie"
-    elif genre:
-        searchUrl = f"https://www.omdbapi.com/?apikey={API_KEY}&s={genre.replace(' ', '%20')}&type=movie"
+    elif genres:
+        searchUrl = f"https://www.omdbapi.com/?apikey={API_KEY}&s={genres.replace(' ', '%20')}&type=movie"
     else:
         searchUrl = f"https://www.omdbapi.com/?apikey={API_KEY}&s=movie&type=movie"
 
@@ -110,21 +110,42 @@ def search_movies():
         print("Received Data:", data)
 
         title = data.get("title", "")
-        genre = data.get("genre", "")
+        genres = data.get("genres", [])  # Expecting a list of genres
         plot = data.get("plot", "")
-        print(f"Title: {title}, Genre: {genre}, Plot: {plot}")
-        query = {"Title": title, "Genre": genre, "Plot": plot}
+        print(f"Title: {title}, Genres: {genres}, Plot: {plot}")
+
+        # Combine genres into a single string for query purposes
+        combined_genres = " ".join(genres)
+        query = {"Title": title, "Genre": combined_genres, "Plot": plot}
         queryData.append(process(query, False))
-        
+
         # Perform search and ranking
-        results = search_and_rank_movies(title, genre, plot)
+        results = search_and_rank_movies(title, combined_genres, plot)
         print("Results:", results)
 
         return jsonify(results)
     except Exception as e:
         print("Error in search_movies:", str(e))
         return jsonify({"error": "Internal server error occurred"}), 500
+    
+@app.route("/details", methods=["GET"])
+def get_movie_details():
+    try:
+        title = request.args.get("title", "")
+        if not title:
+            return jsonify({"error": "Title is required"}), 400
 
+        # Fetch movie details from OMDb API
+        searchUrl = f"https://www.omdbapi.com/?apikey={API_KEY}&t={title.replace(' ', '%20')}&type=movie&plot=full"
+        movieJSON = json.loads(url_request.urlopen(searchUrl).read().decode("utf8"))
+
+        if "Error" in movieJSON:
+            return jsonify({"error": "Movie not found"}), 404
+
+        return jsonify(movieJSON)  # Send detailed movie info back to the frontend
+    except Exception as e:
+        print(f"Error fetching movie details: {str(e)}")
+        return jsonify({"error": "Internal server error occurred"}), 500
 
 # Main entry point
 if __name__ == "__main__":
